@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choice Remit · Compliance Agent</title>
+<style>
+:root{
+  --bg:#060b16; --bg2:#0a1222; --panel:#0d172b; --panel2:#111d35; --line:#1b2a47; --line2:#24375c;
+  --ink:#e8eefb; --ink2:#a7b4cf; --ink3:#6d7d9e;
+  --brand:#14c8a0; --brand2:#0e9e80; --blue:#4c8dff; --amber:#ffb547; --red:#ff5d6c; --violet:#a98bff;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);overflow:hidden}
+body{background:radial-gradient(1200px 600px at 75% -10%,#10305255,transparent 60%),radial-gradient(900px 500px at -10% 110%,#0e9e8022,transparent 60%),var(--bg)}
+.app{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;gap:10px;padding:12px 14px}
+
+/* ── header */
+header{display:flex;align-items:center;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;min-width:180px}
+.logo img{height:38px;width:auto;display:block}
+.mono-mark{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#0b6fd6);display:grid;place-items:center;font-weight:800;letter-spacing:-.5px;color:#03131a;font-size:15px;box-shadow:0 0 0 1px #ffffff22 inset,0 6px 20px #14c8a033}
+.wordmark{font-weight:750;font-size:17px;letter-spacing:-.2px}
+.wordmark span{color:var(--brand)}
+.title{display:flex;flex-direction:column;border-left:1px solid var(--line2);padding-left:16px}
+.title b{font-size:15px;font-weight:650}
+.title small{color:var(--ink3);font-size:11.5px}
+.live{display:flex;align-items:center;gap:8px;padding:5px 11px;border-radius:99px;background:#14c8a014;border:1px solid #14c8a044;color:var(--brand);font:600 11px var(--mono);letter-spacing:.6px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 0 var(--brand);animation:pulse 1.6s infinite}
+.live.paused{color:var(--amber);border-color:#ffb54755;background:#ffb54712}.live.paused i{background:var(--amber);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 #14c8a088}70%{box-shadow:0 0 0 9px #14c8a000}100%{box-shadow:0 0 0 0 #14c8a000}}
+.hdr-right{margin-left:auto;text-align:right;font-size:11px;color:var(--ink3);line-height:1.5}
+.hdr-right b{color:var(--ink2);font-weight:600}
+.clock{font:600 18px var(--mono);color:var(--ink);letter-spacing:.5px}
+
+/* ── KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.kpi{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:10px 14px;position:relative;overflow:hidden}
+.kpi label{font-size:10.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.kpi .v{font:650 24px var(--mono);letter-spacing:-.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:11px;color:var(--ink3)}
+.kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c,var(--brand))}
+
+/* ── main grid */
+main{display:grid;grid-template-columns:minmax(300px,27fr) minmax(380px,38fr) minmax(380px,35fr);gap:10px;min-height:0}
+.panel{background:linear-gradient(180deg,var(--panel),#0b1426);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:650;font-size:12.5px}
+.ph small{color:var(--ink3);font-weight:500;margin-left:auto;font-size:11px}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0}
+
+/* stream */
+.stream{flex:1;overflow:hidden;position:relative}
+.row{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;padding:7px 14px;border-bottom:1px solid #16233d;animation:slide .35s ease-out}
+@keyframes slide{from{opacity:0;transform:translateY(-8px);background:#14c8a018}to{opacity:1;transform:none}}
+.row .t{font:11px var(--mono);color:var(--ink3)}
+.row .who{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.row .who em{font-style:normal;color:var(--ink3)}
+.row .amt{font:600 12px var(--mono);text-align:right}
+.row .meta{grid-column:2/4;display:flex;align-items:center;gap:6px;margin-top:-2px}
+.bar{flex:1;height:4px;background:#1a2741;border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.tag{font:600 9.5px var(--mono);padding:2px 6px;border-radius:5px;letter-spacing:.5px}
+.tag.CLEAR{color:var(--brand);background:#14c8a016}
+.tag.REVIEW{color:var(--amber);background:#ffb54718}
+.tag.HOLD{color:var(--red);background:#ff5d6c1c}
+.cc{font:600 9.5px var(--mono);color:var(--ink2);background:#1b2a47;padding:1px 5px;border-radius:4px}
+.row.flag{background:linear-gradient(90deg,#ffb54710,transparent 70%)}
+.row.hold{background:linear-gradient(90deg,#ff5d6c16,transparent 70%)}
+
+/* corridor */
+.corridor{height:205px;flex:none}
+.corridor svg{width:100%;height:100%;display:block}
+
+/* agent feed */
+.agent-head{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.avatar{width:40px;height:40px;border-radius:12px;background:conic-gradient(from 200deg,var(--brand),var(--blue),var(--violet),var(--brand));display:grid;place-items:center;position:relative}
+.avatar::before{content:"";position:absolute;inset:2px;border-radius:10px;background:var(--panel)}
+.avatar svg{position:relative}
+.avatar.busy{animation:spin 3s linear infinite}
+@keyframes spin{to{filter:hue-rotate(360deg)}}
+.agent-head b{font-size:14px}
+.agent-head small{display:block;color:var(--ink3);font-size:11px}
+.state{margin-left:auto;font:600 11px var(--mono);color:var(--ink2)}
+.pipeline{display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.stage{flex:1;text-align:center;font:600 9.5px var(--mono);letter-spacing:.4px;color:var(--ink3);padding:6px 2px;border-radius:7px;background:#0f1b31;border:1px solid #182742;transition:all .25s}
+.stage.on{color:#04140f;background:var(--brand);border-color:var(--brand);box-shadow:0 0 18px #14c8a066}
+.stage.done{color:var(--brand);border-color:#14c8a055}
+.feed{flex:1;overflow:hidden;padding:6px 0;display:flex;flex-direction:column-reverse}
+.step{display:grid;grid-template-columns:60px 70px 1fr;gap:8px;padding:5px 14px;font-size:12px;animation:fade .4s}
+@keyframes fade{from{opacity:0;transform:translateX(-6px)}}
+.step .t{font:10.5px var(--mono);color:var(--ink3)}
+.step .k{font:600 9.5px var(--mono);letter-spacing:.4px;align-self:start;margin-top:2px;padding:2px 5px;border-radius:4px;text-align:center;background:#16243f;color:var(--ink2)}
+.step.ok .k{background:#14c8a01c;color:var(--brand)}
+.step.warn .k{background:#ffb5471c;color:var(--amber)}
+.step.crit .k{background:#ff5d6c22;color:var(--red)}
+.step .x{color:var(--ink2)}
+.step .x b{color:var(--ink);font-weight:600}
+.step .cid{font:600 10px var(--mono);color:var(--blue);margin-right:6px}
+.cursor::after{content:"▍";color:var(--brand);animation:blink 1s steps(2) infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+
+/* case file */
+.case-empty{flex:1;display:grid;place-items:center;color:var(--ink3);text-align:center;padding:20px}
+.case{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.case-top{display:flex;gap:14px;align-items:center}
+.ring{width:74px;height:74px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .n{position:absolute;inset:0;display:grid;place-items:center;font:700 22px var(--mono)}
+.ring .n>div{line-height:1;text-align:center}.ring .n small{display:block;font-size:8.5px;color:var(--ink3);text-align:center;margin-top:3px;font-weight:500;letter-spacing:.8px}
+.case-id{font:600 11px var(--mono);color:var(--blue)}
+.case-who{font-size:14px;font-weight:600;margin:2px 0}
+.case-sub{font-size:11.5px;color:var(--ink3)}
+.rec{border-radius:10px;padding:10px 12px;border:1px solid;font-size:12.5px;font-weight:600;display:flex;gap:10px;align-items:center}
+.rec.RECOMMEND_RELEASE{border-color:#14c8a055;background:#14c8a010;color:var(--brand)}
+.rec.ESCALATE{border-color:#ffb54755;background:#ffb54710;color:var(--amber)}
+.rec.DRAFT_STR,.rec.FREEZE_AND_REPORT{border-color:#ff5d6c66;background:#ff5d6c12;color:var(--red)}
+.rec.pending{border-color:var(--line2);color:var(--ink2);background:#0f1b31}
+.sec h4{font-size:10.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-weight:650}
+.factor{display:grid;grid-template-columns:1fr 34px;gap:8px;align-items:center;margin:5px 0}
+.factor .l{font-size:12px}
+.factor .d{font-size:10.5px;color:var(--ink3);grid-column:1/3;margin-top:-3px}
+.factor .p{font:600 12px var(--mono);text-align:right}
+.fbar{grid-column:1/3;height:5px;background:#16233d;border-radius:3px;overflow:hidden}
+.fbar i{display:block;height:100%;border-radius:3px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mcard{background:#0f1b31;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.mcard label{font-size:9.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px}
+.mcard .nm{font-weight:600;font-size:12.5px;margin:2px 0}
+.mcard .norm{font:10.5px var(--mono);color:var(--violet)}
+.mcard .id{font:10.5px var(--mono);color:var(--ink2);margin-top:3px}
+.chk{font:600 10px var(--mono);padding:1px 5px;border-radius:4px}
+.chk.MATCH{color:var(--red);background:#ff5d6c1c}.chk.MISMATCH{color:var(--brand);background:#14c8a01c}.chk.UNKNOWN{color:var(--ink3);background:#1b2a47}
+.simline{display:flex;align-items:center;gap:8px;font:11px var(--mono);color:var(--ink2);margin-top:6px}
+.net{height:190px;background:radial-gradient(circle at 50% 50%,#12203a,#0b1426);border:1px solid var(--line);border-radius:10px;position:relative}
+.net canvas{width:100%;height:100%;display:block}
+.note{background:#0b1528;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ink2);line-height:1.55;white-space:pre-wrap}
+.oblig{font:600 10.5px var(--mono);color:var(--amber);background:#ffb54712;border:1px solid #ffb54733;border-radius:6px;padding:4px 8px;margin-top:4px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font:600 12px var(--sans);border:1px solid var(--line2);background:#13203a;color:var(--ink);padding:8px 12px;border-radius:9px;cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--ink3);background:#182847}
+.btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand2));color:#03140f;border-color:transparent}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.4;cursor:default}
+.signed{font:11px var(--mono);color:var(--brand);border:1px dashed #14c8a066;border-radius:8px;padding:8px 10px}
+.queue{display:flex;gap:5px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);max-height:76px;overflow:hidden}
+.qchip{font:600 10.5px var(--mono);padding:4px 7px;border-radius:6px;background:#0f1b31;border:1px solid var(--line);cursor:pointer;color:var(--ink2)}
+.qchip.sel{border-color:var(--blue);color:var(--ink)}
+.qchip .d{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+/* dock */
+.dock{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.dock .lbl{font-size:10.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:650;margin-right:4px}
+.scn{font:600 11.5px var(--sans);background:#111d35;border:1px solid var(--line2);color:var(--ink);padding:7px 10px;border-radius:8px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.scn:hover{border-color:var(--brand)}
+.scn kbd{font:600 9.5px var(--mono);color:var(--ink3);border:1px solid var(--line2);border-radius:4px;padding:0 4px}
+.dock .sp{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:11px}
+input[type=range]{accent-color:var(--brand);width:90px}
+.story{background:linear-gradient(90deg,#4c8dff,#a98bff);border:none;color:#fff}
+.disclaimer{font-size:10.5px;color:var(--ink3);margin-left:8px}
+
+/* caption (story mode) */
+.caption{position:fixed;left:50%;bottom:78px;transform:translateX(-50%) translateY(20px);max-width:900px;width:calc(100% - 80px);background:#081120ee;backdrop-filter:blur(8px);border:1px solid var(--line2);border-left:4px solid var(--brand);border-radius:12px;padding:14px 18px;opacity:0;transition:all .5s;pointer-events:none;box-shadow:0 20px 60px #000a}
+.caption.show{opacity:1;transform:translateX(-50%)}
+.caption b{display:block;font-size:16px;margin-bottom:3px}
+.caption span{color:var(--ink2);font-size:13px}
+.caption .prog{position:absolute;left:0;bottom:0;height:3px;background:var(--brand);border-radius:0 0 0 12px}
+.flash{animation:flash 1.2s}
+@keyframes flash{0%{box-shadow:0 0 0 0 #ff5d6c}30%{box-shadow:0 0 0 6px #ff5d6c55}100%{box-shadow:0 0 0 0 #ff5d6c00}}
+@media (max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}main{grid-template-columns:1fr 1fr}.col.left{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <img id="logoImg" src="assets/logo.png" alt="Choice Remit" onerror="this.remove();document.getElementById('logoFallback').style.display='flex'">
+      <div id="logoFallback" style="display:none;align-items:center;gap:10px">
+        <div class="mono-mark">CR</div><div class="wordmark">Choice<span>Remit</span></div>
+      </div>
+    </div>
+    <div class="title"><b>Compliance Agent</b><small>Phase 1 · AI Investigation Assistant</small></div>
+    <div class="live" id="live"><i></i><span id="liveTxt">SIMULATION · SYNTHETIC DATA</span></div>
+    <div class="hdr-right">
+      <div class="clock" id="clock">--:--:--</div>
+      <div><b id="cfgLegal">CAN-EAST SOLUTIONS INC.</b> · FINTRAC MSB <b id="cfgFintrac">M19182141</b></div>
+      <div id="cfgAddr">235 Dixon Rd Unit 18, Toronto ON M9P 2M5</div>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi" style="--c:var(--brand)"><label>Transactions screened</label><div class="v" id="kScreened">0</div><div class="s">both parties · every transaction</div></div>
+    <div class="kpi" style="--c:var(--blue)"><label>Engine latency (p50)</label><div class="v" id="kLat">–</div><div class="s" id="kLatS">screen + 9 rules + score</div></div>
+    <div class="kpi" style="--c:var(--amber)"><label>Alerts investigated</label><div class="v" id="kAlerts">0</div><div class="s" id="kAlertsS">0 held · 0 review</div></div>
+    <div class="kpi" style="--c:var(--violet)"><label>Awaiting CCO</label><div class="v" id="kAwait">0</div><div class="s" id="kAwaitS">human sign-off required</div></div>
+    <div class="kpi" style="--c:var(--red)"><label>CCO decisions</label><div class="v" id="kDec">0</div><div class="s" id="kDecS">0 released · 0 STR · 0 frozen</div></div>
+    <div class="kpi" style="--c:#5be3c2"><label>Analyst prep absorbed</label><div class="v" id="kSaved">0m</div><div class="s">est. at 6 min per alert (assumption)</div></div>
+  </section>
+
+  <main>
+    <div class="col left">
+      <div class="panel" style="flex:1">
+        <div class="ph">Transaction stream <small id="tpsLbl">CAD → USD · simulated clock</small></div>
+        <div class="stream" id="stream"></div>
+      </div>
+      <div class="panel corridor">
+        <div class="ph">Corridor flows <small>last 200 transactions</small></div>
+        <svg id="corr" viewBox="0 0 360 165" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="agent-head">
+        <div class="avatar" id="avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14c8a0" stroke-width="2" stroke-linecap="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/><path d="M8.5 12l2.5 2.5L16 9.5"/></svg></div>
+        <div><b>Choice Remit Agent</b><small>Screens, investigates and drafts — the CCO decides</small></div>
+        <div class="state" id="agentState">idle</div>
+      </div>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="feed" id="feed"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Case file <small id="followLbl" style="cursor:pointer">● following live</small></div>
+      <div class="case-empty" id="caseEmpty"><div><div style="font-size:28px;opacity:.5">⌕</div>No alert yet. Trigger a scenario below or press <b>S</b> for the guided story.</div></div>
+      <div class="case" id="case" style="display:none"></div>
+      <div class="queue" id="queue"></div>
+    </div>
+  </main>
+
+  <div class="dock">
+    <span class="lbl">Scenarios</span>
+    <button class="scn" data-s="false_positive"><kbd>1</kbd>Name-match false positive</button>
+    <button class="scn" data-s="structuring"><kbd>2</kbd>Structuring &lt; $10k</button>
+    <button class="scn" data-s="true_hit"><kbd>3</kbd>Listed person (Somali spelling)</button>
+    <button class="scn" data-s="mule_fanin"><kbd>4</kbd>Mule fan-in</button>
+    <button class="scn" data-s="velocity"><kbd>5</kbd>Velocity burst</button>
+    <button class="scn story" id="storyBtn"><kbd style="color:#fff;border-color:#fff8">S</kbd>Guided story (≈4½ min)</button>
+    <div class="sp">
+      <span>Speed</span><input type="range" id="speed" min="1" max="20" value="4"><span id="speedV" style="font-family:var(--mono);color:var(--ink2);width:42px">4/s</span>
+      <button class="scn" id="pauseBtn"><kbd>␣</kbd><span>Pause</span></button>
+    </div>
+  </div>
+</div>
+<div class="caption" id="caption"><b id="capT"></b><span id="capS"></span><div class="prog" id="capP"></div></div>
+
+<script>
+/* =====================================================================
+   CONFIG — edit here for the offline demo (the Java server overrides it)
+   ===================================================================== */
+const CONFIG = {
+  name: "Choice Remit",
+  legalName: "CAN-EAST SOLUTIONS INC.",
+  address: "235 Dixon Rd Unit 18, Toronto ON M9P 2M5",
+  fintrac: "M19182141",
+  cco: "Ismail",
+  limits: { tier1: 3000, tier2: 15000 },
+  threshold: 10000,
+  corridor: { SO: 8, DJ: 5, ET: 3, KE: 2, UG: 2, AE: 3, US: 0 },
+  minutesPerAlert: 6
+};
+
+/* =====================================================================
+   In-browser engine — a faithful port of the Java engine for offline use
+   ===================================================================== */
+const V = c => "AEIOU".includes(c);
+function ortho(t){let o="";for(let i=0;i<t.length;i++){let c=t[i];const nx=t[i+1]||"";
+  if(c==="C"&&(nx===""||V(nx))&&(i===0||V(t[i-1])))continue;
+  if(c==="P"&&nx==="H"){o+="F";i++;continue}
+  if(c==="D"&&nx==="H"){o+="D";i++;continue}
+  if(c==="K"&&nx==="H"){o+="H";i++;continue}
+  if(c==="X")c="H";else if(c==="Q")c="K";
+  if(o.length&&o[o.length-1]===c)continue;o+=c}return o}
+const DROP=new Set("MR MRS MS DR SHEIKH SHEIK SH HAJI HAJJI XAAJI AL EL BIN IBN BINT ABU UMM".split(" "));
+const CANON={};
+[["MUHAMMAD","MOHAMED MOHAMMED MOHAMMAD MUHAMED MAHAMED MAXAMED MOHD MXD MAHAMMED MOXAMED"],
+ ["ABDULLAHI","ABDILAHI ABDULAHI CABDULAAHI CABDILAAHI ABDILLAHI ABDULLAH ABDALLA"],
+ ["HUSSEIN","HUSEIN HUSSEN XUSEEN HUSAYN HUSSAIN HUSEN"],["HASSAN","HASAN XASAN HASSEN"],
+ ["UMAR","OMAR CUMAR OMER"],["ALI","CALI ALY"],["AHMED","AHMAD AXMED AHMET"],
+ ["YUSUF","YOUSUF YOUSEF YUSSUF YOUSSEF"],["ABDIKADIR","ABDIQADIR CABDIQAADIR ABDULKADIR ABDULQADIR"],
+ ["FARAH","FAARAX FARAX"],["IBRAHIM","IBRAAHIM EBRAHIM IBRAHIIM"],
+ ["ABDIRAHMAN","CABDIRAXMAAN ABDURAHMAN ABDULRAHMAN ABDIRAHMAAN"],["FADUMO","FAADUMO FATUMA FATIMA FADUMA"],
+ ["ISMAIL","ISMACIIL ISMAEL ISMAACIIL"],["KHADIJA","KHADIIJO KHADIJO XADIIJO HADIJA"],
+ ["MUSTAFA","MUSTAFE MOSTAFA"],["WARSAME","WARSAAME"],["JAMA","JAAMAC JAMAC"]
+].forEach(([c,vs])=>{const k=ortho(c);CANON[k]=k;vs.split(" ").forEach(v=>CANON[ortho(v)]=k)});
+function tokens(n){return n.normalize("NFD").replace(/\p{M}/gu,"").toUpperCase().replace(/[^A-Z]+/g," ").trim().split(" ")
+  .filter(t=>t&&!DROP.has(t)).map(t=>{const o=ortho(t);return CANON[o]||o})}
+function jw(a,b){if(a===b)return 1;const la=a.length,lb=b.length;if(!la||!lb)return 0;
+  const r=Math.max(0,(Math.max(la,lb)>>1)-1),ma=new Uint8Array(la),mb=new Uint8Array(lb);let m=0;
+  for(let i=0;i<la;i++){const lo=Math.max(0,i-r),hi=Math.min(lb-1,i+r);for(let j=lo;j<=hi;j++)if(!mb[j]&&a[i]===b[j]){ma[i]=mb[j]=1;m++;break}}
+  if(!m)return 0;let t=0,k=0;for(let i=0;i<la;i++)if(ma[i]){while(!mb[k])k++;if(a[i]!==b[k])t++;k++}
+  const j=(m/la+m/lb+(m-t/2)/m)/3;let p=0;const lim=Math.min(4,la,lb);while(p<lim&&a[p]===b[p])p++;return j+p*.1*(1-j)}
+const me=(A,B)=>A.reduce((s,x)=>s+Math.max(...B.map(y=>jw(x,y))),0)/A.length;
+const sim=(A,B)=>(me(A,B)+me(B,A))/2;
+
+const WATCHLIST=[ // FICTIONAL demo entries
+ ["DL-0007","Cabdiqaadir Maxamed Faarax","1979-03-14","SO","DEMO-UN"],["DL-0012","Amina Xasan Cali","1968-11-20","SO","DEMO-SEMA"],
+ ["DL-0019","Bilaal Cismaan Gurey","1985-01-02","SO","DEMO-OFAC"],["DL-0023","Yaxye Maxamuud Dhuxul","1974-07-09","KE","DEMO-UN"],
+ ["DL-0031","Saciid Aw-Cabdi Qorane","1982-05-30","AE","DEMO-OFAC"],["DL-0044","Tariq Bello Okonjo","1977-09-18","NG","DEMO-UN"],
+ ["DL-0052","Marwan Halabi Qassem","1970-02-25","LB","DEMO-OFAC"],["DL-0060","Xaliimo Cumar Gacal","1990-12-01","DJ","DEMO-SEMA"],
+ ["DL-0068","Viktor Anatolyevich Sorin","1965-04-04","RU","DEMO-SEMA"],["DL-0071","Daahir Faysal Garaad","1988-08-08","ET","DEMO-UN"]
+].map(([id,name,dob,country,list])=>({id,name,dob,country,list,tok:tokens(name)}));
+
+const scache=new Map();
+function screen(role,p){const key=role+"|"+p.id;if(scache.has(key))return scache.get(key);
+  const q=tokens(p.name);let best=null,bs=0;
+  for(const e of WATCHLIST){const s=sim(q,e.tok);if(s>bs){bs=s;best=e}}
+  let r=null;
+  if(best&&bs>=.92){const dob=(!p.dob||!best.dob)?"UNKNOWN":(p.dob===best.dob?"MATCH":"MISMATCH");
+    const cty=(!p.country||!best.country)?"UNKNOWN":(p.country===best.country?"MATCH":"MISMATCH");
+    let v=dob==="MISMATCH"?"FALSE_POSITIVE_LIKELY":(dob==="MATCH"&&bs>=.93)?"TRUE_MATCH_LIKELY":(dob==="UNKNOWN"&&bs>=.95&&cty==="MATCH")?"TRUE_MATCH_LIKELY":"POSSIBLE_MATCH";
+    r={role,queried:p.name,listed:best.name,list:best.list,listedDob:best.dob,listedCountry:best.country,similarity:Math.round(bs*1000)/1000,dobCheck:dob,countryCheck:cty,verdict:v,qNorm:q.join(" "),lNorm:best.tok.join(" ")}}
+  scache.set(key,r);return r}
+
+const DAY=864e5, S=new Map(), B=new Map();
+function assess(t){
+  const t0=performance.now(), now=t.ts;
+  let s=S.get(t.sender.id); if(!s){s={win:[],sum:0,bens:new Map(),ever:new Set(),sub:0};S.set(t.sender.id,s)}
+  let b=B.get(t.ben.id); if(!b){b={win:[],senders:new Map()};B.set(t.ben.id,b)}
+  while(s.win.length&&s.win[0].ts<now-DAY){const o=s.win.shift();s.sum-=o.amount;if(o.amount>=2000&&o.amount<1e4)s.sub--;const c=s.bens.get(o.ben.id);c===1?s.bens.delete(o.ben.id):s.bens.set(o.ben.id,c-1)}
+  while(b.win.length&&b.win[0].ts<now-DAY){const o=b.win.shift();const c=b.senders.get(o.sender.id);c===1?b.senders.delete(o.sender.id):b.senders.set(o.sender.id,c-1)}
+  const newBen=!s.ever.has(t.ben.id), amt=t.amount;
+  s.win.push(t);s.sum+=amt;s.bens.set(t.ben.id,(s.bens.get(t.ben.id)||0)+1);s.ever.add(t.ben.id);if(amt>=2000&&amt<1e4)s.sub++;
+  b.win.push(t);b.senders.set(t.sender.id,(b.senders.get(t.sender.id)||0)+1);
+  const f=[],ob=[];
+  let scr=screen("BENEFICIARY",t.ben);const s2=screen("SENDER",t.sender);if(!scr||(s2&&s2.similarity>scr.similarity))scr=s2;
+  if(scr)f.push({code:"SANCTIONS",label:`Watchlist name match (${scr.role.toLowerCase()})`,points:{TRUE_MATCH_LIKELY:100,POSSIBLE_MATCH:45,FALSE_POSITIVE_LIKELY:25}[scr.verdict],detail:`similarity ${scr.similarity.toFixed(3)} · DOB ${scr.dobCheck} · country ${scr.countryCheck} · ${scr.list}`});
+  const lim=t.sender.tier>=2?CONFIG.limits.tier2:CONFIG.limits.tier1;
+  if(s.sum>lim)f.push({code:"LIMIT",label:"Daily send limit exceeded",points:25,detail:`24h total ${$(s.sum)} vs tier-${t.sender.tier} limit ${$(lim)}`});
+  if(amt>=2000&&amt<1e4&&s.sub>=2&&s.sum>=9000)f.push({code:"STRUCTURING",label:"Possible structuring below $10,000",points:35,detail:`${s.sub} sub-threshold sends totalling ${$(s.sum)} within 24h`});
+  if(s.win.length>=5)f.push({code:"VELOCITY",label:"High send velocity",points:15,detail:`${s.win.length} transactions in 24h`});
+  if(b.senders.size>=4)f.push({code:"FAN_IN",label:"Many senders → one beneficiary",points:40+5*(b.senders.size-4),detail:`${b.senders.size} distinct senders paid ${t.ben.name} in 24h`});
+  if(s.bens.size>=4)f.push({code:"FAN_OUT",label:"One sender → many beneficiaries",points:15,detail:`${s.bens.size} distinct beneficiaries in 24h`});
+  if(newBen&&amt>=2000)f.push({code:"NEW_BEN",label:"First payment to new beneficiary",points:10,detail:`${$(amt)} to a first-time beneficiary`});
+  if(amt>=2000&&amt%500===0)f.push({code:"ROUND",label:"Round-amount transfer",points:5,detail:$(amt)});
+  const cw=CONFIG.corridor[t.country]||0;if(cw>0&&amt>=1000)f.push({code:"CORRIDOR",label:"Corridor risk weighting",points:cw,detail:`${t.country} corridor, per enterprise risk assessment`});
+  if(amt>=1e4)ob.push("EFTR — single international EFT ≥ $10,000");else if(s.sum>=1e4)ob.push("EFTR — 24-hour rule aggregate ≥ $10,000");
+  const score=Math.min(100,f.reduce((a,x)=>a+x.points,0));
+  const trueHit=scr&&scr.verdict==="TRUE_MATCH_LIKELY";
+  const decision=(trueHit||score>=70||f.some(x=>x.code==="LIMIT"))?"HOLD":(score>=40||scr)?"REVIEW":"CLEAR";
+  let network=null;
+  if(decision!=="CLEAR"){const nodes=new Map(),edges=new Map();
+    nodes.set(t.sender.id,{id:t.sender.id,label:t.sender.name,kind:"sender-focus"});nodes.set(t.ben.id,{id:t.ben.id,label:t.ben.name,kind:"ben-focus"});
+    const add=o=>{if(nodes.size>=14&&!(nodes.has(o.sender.id)&&nodes.has(o.ben.id)))return;
+      if(!nodes.has(o.sender.id))nodes.set(o.sender.id,{id:o.sender.id,label:o.sender.name,kind:"sender"});
+      if(!nodes.has(o.ben.id))nodes.set(o.ben.id,{id:o.ben.id,label:o.ben.name,kind:"ben"});
+      const k=o.sender.id+">"+o.ben.id,e=edges.get(k)||{from:o.sender.id,to:o.ben.id,count:0,amount:0};e.count++;e.amount+=o.amount;edges.set(k,e)};
+    s.win.forEach(add);b.win.forEach(add);network={nodes:[...nodes.values()],edges:[...edges.values()]}}
+  return {t,factors:f,score,decision,screening:scr,obligations:ob,network,latencyUs:(performance.now()-t0)*1000,
+    sTx:s.win.length,sSum:s.sum,bSenders:b.senders.size,sBens:s.bens.size}}
+
+function recommend(a){const s=a.screening;
+  if(s&&s.verdict==="TRUE_MATCH_LIKELY")return"FREEZE_AND_REPORT";
+  if(s&&s.verdict==="FALSE_POSITIVE_LIKELY"&&a.factors.every(f=>f.code==="SANCTIONS"||f.points<=10))return"RECOMMEND_RELEASE";
+  const strong=a.factors.some(f=>f.code==="STRUCTURING")&&a.sSum>=1e4;
+  if(a.score>=70&&(strong||a.factors.some(f=>f.code==="FAN_IN")))return"DRAFT_STR";
+  if(strong)return"DRAFT_STR";return"ESCALATE"}
+const REC_LABEL={RECOMMEND_RELEASE:"Release — false positive, evidence attached",ESCALATE:"Escalate — enhanced due diligence required",
+  DRAFT_STR:"Draft STR to FINTRAC — reasonable grounds to suspect",FREEZE_AND_REPORT:"Freeze — Listed Person/Entity Property Report + RCMP/CSIS disclosure"};
+
+function narrative(a,r,ev){const t=a.t;let s=`Alert on ${t.id}: ${t.sender.name} sent ${$(t.amount,2)} CAD to ${t.ben.name} (${t.country}) via ${t.channel}. Risk score ${a.score}/100.`;
+  if(ev.length)s+=" Findings: "+ev.map((e,i)=>`${i+1}) ${e}`).join(" ");
+  if(a.obligations.length)s+=" Reporting: "+a.obligations.join("; ")+".";
+  s+=" "+{RECOMMEND_RELEASE:"Conclusion: the watchlist hit is a name-only match contradicted by date of birth; no other indicators. Recommend release and record the clearing rationale.",
+    ESCALATE:"Conclusion: indicators warrant enhanced due diligence. Recommend holding pending source-of-funds and relationship-to-beneficiary information from the customer.",
+    DRAFT_STR:"Conclusion: the pattern gives reasonable grounds to suspect the activity is related to a money laundering offence. Recommend filing an STR with FINTRAC and placing the customer on enhanced monitoring.",
+    FREEZE_AND_REPORT:"Conclusion: identifiers corroborate a listed person. Do not release funds. Recommend a Listed Person or Entity Property Report to FINTRAC and disclosure to the RCMP and CSIS."}[r];
+  return s}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function investigate(c){const a=c.a,t=a.t,ev=[];
+  const step=(stage,text,level="info")=>bus.step({caseId:c.id,ts:Date.now(),stage,text,level});
+  step("INGEST",`Picked up <b>${t.id}</b> · ${t.sender.name} → ${t.ben.name} (${t.country}) · <b>${$(t.amount,2)}</b> CAD / ${$(t.amount*t.fx,2)} USD`);await sleep(450);
+  const s=a.screening;
+  if(s){step("SCREEN",`Watchlist hit on ${s.role.toLowerCase()}: “${s.queried}” vs listed “${s.listed}” (${s.list}) — similarity <b>${s.similarity.toFixed(3)}</b> after Somali-orthography normalisation.`,"warn");await sleep(650);
+    const id={FALSE_POSITIVE_LIKELY:`Identifiers disagree: customer DOB ${t.sender.dob} vs listed DOB ${s.listedDob}. Same name, different person.`,
+      TRUE_MATCH_LIKELY:`Identifiers corroborate: DOB ${s.dobCheck}, country ${s.countryCheck}. Treat as a listed person until proven otherwise.`,
+      POSSIBLE_MATCH:"Insufficient identifiers to clear or confirm — request ID document from payout partner."}[s.verdict];
+    ev.push(id);step("SCREEN",id,s.verdict==="TRUE_MATCH_LIKELY"?"crit":s.verdict==="FALSE_POSITIVE_LIKELY"?"ok":"warn");await sleep(550)}
+  else{step("SCREEN","Both parties screened against consolidated lists — no match.","ok");await sleep(350)}
+  step("PATTERN",`Sender 24h profile: ${a.sTx} sends, ${$(a.sSum)} total, ${a.sBens} distinct beneficiaries. Beneficiary received from ${a.bSenders} distinct senders.`);await sleep(500);
+  for(const f of a.factors){if(f.code==="SANCTIONS")continue;step("RULES",`<b>+${f.points}</b> ${f.label} — ${f.detail}`,f.points>=25?"warn":"info");ev.push(`${f.label}: ${f.detail}`);await sleep(320)}
+  for(const o of a.obligations){step("REPORT","Mandatory reporting triggered: <b>"+o+"</b>","warn");await sleep(300)}
+  if(a.network){step("NETWORK",`Mapped 1-hop network: ${a.network.nodes.length} parties, ${a.network.edges.length} payment links in the last 24h.`);await sleep(450)}
+  const r=recommend(a);step("SCORE",`Risk score <b>${a.score}/100</b> → ${REC_LABEL[r]}`,r==="RECOMMEND_RELEASE"?"ok":"crit");await sleep(500);
+  step("NARRATE","Drafting disposition note for the compliance log…");await sleep(400);
+  c.recommendation=r;c.recommendationLabel=REC_LABEL[r];c.narrative=narrative(a,r,ev);c.status="AWAITING_CCO";
+  step("CCO",`Routed to <b>${CONFIG.cco}</b> (CCO) for sign-off. No action taken on funds without human approval.`);
+  bus.kase(toCase(c))}
+function toCase(c){const a=c.a,t=a.t;return{id:c.id,txnId:t.id,status:c.status,recommendation:c.recommendation||null,recommendationLabel:c.recommendationLabel||null,
+  score:a.score,decision:a.decision,sender:t.sender.name,senderDob:t.sender.dob,ben:t.ben.name,country:t.country,amountCad:t.amount,ts:t.ts,
+  narrative:c.narrative||"",decidedBy:c.decidedBy||null,latencyUs:a.latencyUs,factors:a.factors,obligations:a.obligations,screening:a.screening,network:a.network}}
+
+/* ---------- synthetic traffic (seeded) */
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=rng(42), pick=a=>a[Math.floor(R()*a.length)], gauss=()=>Math.sqrt(-2*Math.log(R()||1e-9))*Math.cos(2*Math.PI*R());
+const FIRST="Abdi Ahmed Amina Asha Faadumo Hodan Khadra Hassan Hussein Ibrahim Yusuf Mohamed Omar Ali Nasra Sahra Ayaan Zamzam Farhan Liban Bashir Deeqa Hibo Sagal Abdirahman Abdullahi Mustafe Idil Ubah Muna Nimco Tesfaye Selam Wanjiru Kamau Grace Daniel Mehdi Ruqiya Shukri".split(" ");
+const FATHER="Abdi Ahmed Hassan Hussein Ibrahim Yusuf Mohamed Omar Ali Farah Jama Warsame Nur Aden Osman Elmi Guled Dahir Egal Hirsi Samatar Duale Mohamud Isse Abdullahi Shire Bile".split(" ");
+const CTRY="SO SO SO SO SO SO KE KE KE ET ET UG AE AE US US DJ".split(" ");
+const CHAN=["App","App","App","Web","WhatsApp (Zap)","Agent"];
+let pid=0,seq=100000,clockMs=Date.now();
+const nm=()=>{const a=pick(FATHER);let b=pick(FATHER);while(b===a)b=pick(FATHER);return`${pick(FIRST)} ${a} ${b}`};
+const dob=()=>`${1955+Math.floor(R()*48)}-${String(1+Math.floor(R()*12)).padStart(2,"0")}-${String(1+Math.floor(R()*28)).padStart(2,"0")}`;
+const newBen=c=>({id:"B"+(++pid),name:nm(),dob:null,country:c,tier:0});
+const customers=[],favs=new Map();
+for(let i=0;i<1500;i++){const c={id:"C"+(++pid),name:nm(),dob:dob(),country:"CA",tier:R()<.18?2:1};customers.push(c);
+  const n=1+Math.floor(R()*3),f=[];for(let j=0;j<n;j++)f.push(newBen(pick(CTRY)));favs.set(c.id,f)}
+const queue=[];
+function mk(s,b,amt,scn,adv){clockMs+=adv;return{id:"CR-"+(++seq),ts:clockMs,sender:s,ben:b,country:b.country,amount:Math.round(amt*100)/100,fx:.715+gauss()*.0008,channel:pick(CHAN),scenario:scn}}
+function nextTxn(){if(queue.length)return queue.shift();const c=pick(customers),f=favs.get(c.id),b=R()<.9?pick(f):newBen(pick(CTRY));
+  let a=Math.exp(5.7+gauss()*.75);a=Math.max(25,Math.min(c.tier===2?6000:1800,a));if(R()<.25)a=Math.round(a/50)*50;return mk(c,b,a,"organic",20000+R()*220000)}
+function inject(s){
+  if(s==="false_positive"){queue.push(mk({id:"C"+(++pid),name:"Amina Hassan Ali",dob:"1991-06-02",country:"CA",tier:1},newBen("SO"),350,s,60000))}
+  else if(s==="structuring"){const c={id:"C"+(++pid),name:nm(),dob:dob(),country:"CA",tier:2},b1=newBen("SO"),b2=newBen("AE");
+    queue.push(mk(c,b1,4900,s,90000),mk(c,b2,4850,s,40*60000),mk(c,b1,4950,s,75*60000))}
+  else if(s==="true_hit"){queue.push(mk(pick(customers),{id:"B"+(++pid),name:"Abdikadir Mohamed Farah",dob:null,country:"SO",tier:0},1200,s,60000))}
+  else if(s==="mule_fanin"){const m=newBen("KE");for(let i=0;i<5;i++)queue.push(mk(pick(customers),m,800+Math.floor(R()*1100),s,8*60000+R()*15*60000))}
+  else if(s==="velocity"){const c={id:"C"+(++pid),name:nm(),dob:dob(),country:"CA",tier:1};["SO","KE","ET","SO","UG","SO"].forEach(cc=>queue.push(mk(c,newBen(cc),450+Math.floor(R()*160),s,6*60000+R()*6*60000)))}}
+
+/* =====================================================================
+   Transport: live Java engine (SSE) if served by it, else offline engine
+   ===================================================================== */
+const $=(n,d=0)=>"$"+Number(n).toLocaleString("en-CA",{minimumFractionDigits:d,maximumFractionDigits:d});
+const el=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let MODE="offline", tps=4, paused=false, cases=new Map(), local=new Map(), caseSeq=0;
+const M={screened:0,alerts:0,holds:0,reviews:0,released:0,escalated:0,strs:0,frozen:0,lat:[]};
+
+const bus={
+  txn(x){renderTxn(x)}, step(s){renderStep(s)},
+  kase(c){const prev=cases.get(c.id);cases.set(c.id,c);if(prev&&prev.status!==c.status&&c.decidedBy)countDecision(c);renderQueue();if(follow&&(!prev||(c.status==="AWAITING_CCO"&&prev.status!=="AWAITING_CCO"))&&shouldSwitch(c)){selected=c.id;selectedAt=Date.now()}if(selected===c.id)renderCase();renderKpis()},
+  metrics(m){Object.assign(M,m);renderKpis()}
+};
+function countDecision(c){if(MODE==="java")return;({RELEASED:()=>M.released++,ESCALATED:()=>M.escalated++,STR_FILED:()=>M.strs++,FROZEN_REPORTED:()=>M.frozen++}[c.status]||(()=>0))();renderKpis()}
+
+async function boot(){
+  if(location.protocol.startsWith("http")){
+    try{const r=await fetch("api/config",{cache:"no-store"});if(r.ok){const c=await r.json();applyConfig(c);startJava();return}}catch(e){}
+  }
+  startOffline()}
+function applyConfig(c){Object.assign(CONFIG,{name:c.name||CONFIG.name,legalName:c.legalName||CONFIG.legalName,address:c.address||CONFIG.address,fintrac:c.fintrac||CONFIG.fintrac,cco:c.cco||CONFIG.cco});
+  el("cfgLegal").textContent=CONFIG.legalName;el("cfgFintrac").textContent=CONFIG.fintrac;el("cfgAddr").textContent=CONFIG.address}
+function startJava(){MODE="java";el("liveTxt").textContent="LIVE · JAVA ENGINE · SYNTHETIC DATA";el("kLatS").textContent="measured in the Java engine";
+  const es=new EventSource("api/stream");
+  es.onmessage=e=>{const d=JSON.parse(e.data);
+    if(d.type==="txn"){M.lat.push(d.latencyUs);renderTxn({id:d.id,ts:d.ts,sender:d.sender,ben:d.ben,country:d.country,amount:d.amountCad,score:d.score,decision:d.decision,scenario:d.scenario})}
+    else if(d.type==="step")renderStep(d);else if(d.type==="case")bus.kase(d);
+    else if(d.type==="metrics"){M.screened=d.screened;M.alerts=d.alerts;M.holds=d.holds;M.reviews=d.alerts-d.holds;M.released=d.released;M.escalated=d.escalated;M.strs=d.strs;M.frozen=d.frozen;M.p50=d.p50us;M.p99=d.p99us;renderKpis()}
+    else if(d.type==="config")applyConfig(d)};
+  es.onerror=()=>{el("liveTxt").textContent="RECONNECTING…"}}
+const api=(p)=>fetch(p,{method:"POST"}).then(r=>r.json()).catch(()=>null);
+
+function startOffline(){MODE="offline";el("kLatS").textContent="JS port · browser timer is coarse — run the Java engine for µs";
+  (async function loop(){while(true){if(!paused)tick();await sleep(1000/tps)}})()}
+function tick(){const t=nextTxn(),a=assess(t);M.screened++;M.lat.push(a.latencyUs);if(M.lat.length>2000)M.lat.splice(0,1000);
+  renderTxn({id:t.id,ts:t.ts,sender:t.sender.name,ben:t.ben.name,country:t.country,amount:t.amount,score:a.score,decision:a.decision,scenario:t.scenario});
+  if(a.decision!=="CLEAR"){M.alerts++;a.decision==="HOLD"?M.holds++:M.reviews++;
+    const c={id:"CASE-"+String(++caseSeq).padStart(4,"0"),a,status:"INVESTIGATING"};local.set(c.id,c);bus.kase(toCase(c));investigate(c)}
+  renderKpis()}
+
+function triggerScenario(s){if(MODE==="java")api("api/inject?s="+s);else inject(s)}
+function decide(id,action){
+  if(MODE==="java"){api(`api/decide?case=${id}&action=${action}`);return}
+  const c=local.get(id);if(!c||c.status!=="AWAITING_CCO")return;
+  const map={approve:{RECOMMEND_RELEASE:"RELEASED",ESCALATE:"ESCALATED",DRAFT_STR:"STR_FILED",FREEZE_AND_REPORT:"FROZEN_REPORTED"}[c.recommendation],release:"RELEASED",escalate:"ESCALATED",str:"STR_FILED"};
+  c.status=map[action];c.decidedBy=CONFIG.cco;c.decidedAt=Date.now();bus.kase(toCase(c))}
+
+/* =====================================================================
+   Rendering
+   ===================================================================== */
+const hhmm=ts=>new Date(ts).toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit",hour12:false});
+const scoreColor=s=>s>=70?"var(--red)":s>=40?"var(--amber)":s>=20?"#7fb2ff":"var(--brand)";
+function renderTxn(x){const st=el("stream"),d=document.createElement("div");
+  d.className="row"+(x.decision==="HOLD"?" hold":x.decision==="REVIEW"?" flag":"");
+  d.innerHTML=`<div class="t">${hhmm(x.ts)}</div><div class="who">${esc(x.sender)} <em>→</em> ${esc(x.ben)}</div><div class="amt">${$(x.amount)}</div>
+  <div class="meta"><span class="cc">${x.country}</span><div class="bar"><i style="width:${Math.max(3,x.score)}%;background:${scoreColor(x.score)}"></i></div><span class="tag ${x.decision}">${x.decision}</span></div>`;
+  st.prepend(d);while(st.children.length>40)st.lastChild.remove();corridorPulse(x)}
+
+const STAGES=["INGEST","SCREEN","PATTERN","RULES","NETWORK","SCORE","NARRATE","CCO"];
+el("pipeline").innerHTML=STAGES.map(s=>`<div class="stage" data-s="${s}">${s}</div>`).join("");
+let lastStageTimer;
+function renderStep(s){const f=el("feed"),d=document.createElement("div");d.className="step "+(s.level||"info");
+  d.innerHTML=`<div class="t">${new Date(s.ts).toLocaleTimeString("en-CA",{hour12:false})}</div><div class="k">${s.stage}</div><div class="x"><span class="cid">${s.caseId}</span>${s.text}</div>`;
+  f.prepend(d);while(f.children.length>80)f.lastChild.remove();
+  const idx=STAGES.indexOf(s.stage==="REPORT"?"RULES":s.stage);
+  document.querySelectorAll(".stage").forEach((n,i)=>{n.className="stage"+(i<idx?" done":i===idx?" on":"")});
+  el("avatar").classList.add("busy");el("agentState").textContent=`investigating ${s.caseId}`;
+  clearTimeout(lastStageTimer);lastStageTimer=setTimeout(()=>{document.querySelectorAll(".stage").forEach(n=>n.className="stage");el("avatar").classList.remove("busy");el("agentState").textContent="watching stream"},2500);
+  if(s.level==="crit"){el("avatar").classList.add("flash");setTimeout(()=>el("avatar").classList.remove("flash"),1200)}}
+
+function renderKpis(){const lat=M.p50!=null?M.p50:median(M.lat);
+  el("kScreened").textContent=M.screened.toLocaleString();
+  el("kLat").textContent=lat==null?"–":lat<1000?lat.toFixed(lat<10?1:0)+" µs":(lat/1000).toFixed(1)+" ms";
+  el("kAlerts").textContent=M.alerts.toLocaleString();el("kAlertsS").textContent=`${M.holds} held · ${M.alerts-M.holds} review`;
+  const awaiting=[...cases.values()].filter(c=>c.status==="AWAITING_CCO").length;el("kAwait").textContent=awaiting;
+  const dec=M.released+M.escalated+M.strs+M.frozen;el("kDec").textContent=dec;
+  el("kDecS").textContent=`${M.released} released · ${M.escalated} EDD · ${M.strs} STR · ${M.frozen} frozen`;
+  const mins=M.alerts*CONFIG.minutesPerAlert;el("kSaved").textContent=mins<60?mins+"m":(mins/60).toFixed(1)+"h"}
+function median(a){if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]}
+
+/* case queue + file */
+let selected=null, follow=true, selectedAt=0;
+// Presenter-friendly follow: don't yank a higher-risk open case off screen for a lower-risk one
+function shouldSwitch(n){const cur=cases.get(selected);if(!cur||cur.id===n.id)return true;
+  if(cur.status!=="AWAITING_CCO"&&cur.status!=="INVESTIGATING")return true;
+  return n.score>=cur.score||Date.now()-selectedAt>12000}
+el("followLbl").onclick=()=>{follow=!follow;el("followLbl").textContent=follow?"● following live":"○ pinned — click to follow live";if(follow){const l=[...cases.values()].pop();if(l){selected=l.id;renderCase()}}};
+function renderQueue(){const q=el("queue"),list=[...cases.values()].slice(-18).reverse();
+  q.innerHTML=list.map(c=>{const col=c.status==="AWAITING_CCO"?"var(--violet)":c.status==="INVESTIGATING"?"var(--blue)":["STR_FILED","FROZEN_REPORTED"].includes(c.status)?"var(--red)":"var(--brand)";
+    return`<span class="qchip ${c.id===selected?"sel":""}" data-id="${c.id}"><span class="d" style="background:${col}"></span>${c.id}</span>`}).join("");
+  q.querySelectorAll(".qchip").forEach(n=>n.onclick=()=>{selected=n.dataset.id;follow=false;el("followLbl").textContent="○ pinned — click to follow live";renderCase();renderQueue()})}
+
+let netAnim=null;
+function renderCase(){const c=cases.get(selected);if(!c)return;el("caseEmpty").style.display="none";const box=el("case");box.style.display="flex";
+  const circ=2*Math.PI*31, off=circ*(1-c.score/100), col=scoreColor(c.score);
+  const maxP=Math.max(40,...(c.factors||[]).map(f=>f.points));
+  const fac=(c.factors||[]).map(f=>`<div class="factor"><div class="l">${esc(f.label)}</div><div class="p" style="color:${f.points>=25?"var(--amber)":"var(--ink2)"}">+${f.points}</div>
+    <div class="fbar"><i style="width:0;background:${f.points>=35?"var(--red)":f.points>=20?"var(--amber)":"var(--blue)"}" data-w="${Math.min(100,f.points/maxP*100)}"></i></div><div class="d">${esc(f.detail)}</div></div>`).join("")||`<div class="case-sub">No rule factors.</div>`;
+  const s=c.screening;
+  const scr=s?`<div class="sec"><h4>Screening · ${s.list}</h4><div class="match">
+    <div class="mcard"><label>${s.role.toLowerCase()} on transaction</label><div class="nm">${esc(s.queried)}</div><div class="norm">${esc(s.qNorm||tokens(s.queried).join(" "))}</div>
+      <div class="id">DOB ${s.role==="SENDER"?(c.senderDob||"—"):"not on file"}</div></div>
+    <div class="mcard"><label>listed (fictional demo entry)</label><div class="nm">${esc(s.listed)}</div><div class="norm">${esc(s.lNorm||tokens(s.listed).join(" "))}</div>
+      <div class="id">DOB ${s.listedDob||"—"} · ${s.listedCountry||""}</div></div></div>
+    <div class="simline">similarity <b style="color:var(--ink)">${s.similarity.toFixed(3)}</b> · DOB <span class="chk ${s.dobCheck}">${s.dobCheck}</span> · country <span class="chk ${s.countryCheck}">${s.countryCheck}</span></div>
+    <div class="case-sub" style="margin-top:4px;color:var(--violet)">↑ purple = normalised form (Somali C/X/Q and long vowels folded, name variants canonicalised)</div></div>`:"";
+  const rec=c.recommendation?`<div class="rec ${c.recommendation}">◆ ${esc(c.recommendationLabel)}</div>`:`<div class="rec pending"><span class="cursor">Agent investigating</span></div>`;
+  const obl=(c.obligations||[]).map(o=>`<div class="oblig">⚑ ${esc(o)}</div>`).join("");
+  let act="";
+  if(c.status==="AWAITING_CCO")act=`<div class="sec"><h4>CCO sign-off · ${esc(CONFIG.cco)}</h4><div class="actions">
+    <button class="btn primary" data-a="approve">Approve recommendation <kbd style="font:10px var(--mono);opacity:.6">A</kbd></button>
+    ${c.recommendation!=="RECOMMEND_RELEASE"&&c.recommendation!=="FREEZE_AND_REPORT"?`<button class="btn" data-a="release">Release</button>`:""}
+    ${c.recommendation!=="ESCALATE"?`<button class="btn" data-a="escalate">Escalate / EDD</button>`:""}
+    ${c.recommendation!=="DRAFT_STR"&&c.recommendation!=="FREEZE_AND_REPORT"?`<button class="btn" data-a="str">File STR</button>`:""}</div></div>`;
+  else if(c.decidedBy)act=`<div class="signed">✓ ${c.status.replace("_"," ")} · signed off by ${esc(c.decidedBy)} · ${new Date().toLocaleTimeString("en-CA",{hour12:false})} · logged to compliance audit trail</div>`;
+  box.innerHTML=`<div class="case-top"><div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="31" stroke="#1a2741" stroke-width="7" fill="none"/>
+    <circle cx="37" cy="37" r="31" stroke="${col}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="ringArc" style="transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)"/></svg>
+    <div class="n" style="color:${col}"><div>${c.score}<small>RISK</small></div></div></div>
+    <div><div class="case-id">${c.id} · ${c.txnId} · <span class="tag ${c.decision}">${c.decision}</span></div>
+    <div class="case-who">${esc(c.sender)} → ${esc(c.ben)}</div>
+    <div class="case-sub">${$(c.amountCad,2)} CAD · ${c.country} · ${hhmm(c.ts)} · engine ${Number(c.latencyUs).toFixed(1)} µs</div></div></div>
+    ${rec}${act}${obl}${scr}
+    <div class="sec"><h4>Why this score</h4>${fac}</div>
+    ${c.network?`<div class="sec"><h4>24-hour payment network</h4><div class="net"><canvas id="netCv"></canvas></div></div>`:""}
+    ${c.narrative?`<div class="sec"><h4>Draft disposition note</h4><div class="note" id="noteTxt"></div></div>`:""}`;
+  requestAnimationFrame(()=>{const a=el("ringArc");if(a)a.style.strokeDashoffset=off;box.querySelectorAll(".fbar i").forEach(i=>i.style.width=i.dataset.w+"%")});
+  box.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>decide(c.id,b.dataset.a));
+  if(c.narrative)typewrite(el("noteTxt"),c.narrative,c.id);
+  if(c.network)drawNetwork(c.network);renderQueue()}
+
+const typed=new Set();
+function typewrite(node,text,key){if(typed.has(key)){node.textContent=text;return}typed.add(key);let i=0;node.classList.add("cursor");
+  (function go(){if(!node.isConnected)return;i=Math.min(text.length,i+4);node.textContent=text.slice(0,i);if(i<text.length)setTimeout(go,12);else node.classList.remove("cursor")})()}
+
+function drawNetwork(net){cancelAnimationFrame(netAnim);const cv=el("netCv");if(!cv)return;const dpr=devicePixelRatio||1;
+  const W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext("2d");g.scale(dpr,dpr);
+  const N=net.nodes.map((n,i)=>({...n,x:W/2+Math.cos(i*2.4)*W*.3,y:H/2+Math.sin(i*2.4)*H*.3,vx:0,vy:0}));const idx=new Map(N.map((n,i)=>[n.id,i]));
+  const E=net.edges.filter(e=>idx.has(e.from)&&idx.has(e.to)).map(e=>({...e,a:N[idx.get(e.from)],b:N[idx.get(e.to)]}));
+  const maxAmt=Math.max(...E.map(e=>e.amount),1);let tick=0;
+  (function frame(){tick++;
+    if(tick<260){for(const a of N){for(const b of N)if(a!==b){const dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+.01;a.vx+=dx/d2*900;a.vy+=dy/d2*900}
+      a.vx+=(W/2-a.x)*.004;a.vy+=(H/2-a.y)*.006}
+      for(const e of E){const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,d=Math.hypot(dx,dy)||1,f=(d-75)*.02;e.a.vx+=dx/d*f;e.a.vy+=dy/d*f;e.b.vx-=dx/d*f;e.b.vy-=dy/d*f}
+      for(const n of N){n.vx*=.82;n.vy*=.82;n.x=Math.max(16,Math.min(W-16,n.x+n.vx));n.y=Math.max(16,Math.min(H-16,n.y+n.vy))}}
+    g.clearRect(0,0,W,H);
+    for(const e of E){const w=1+3*e.amount/maxAmt;g.strokeStyle=(e.b.kind==="ben-focus"||e.a.kind==="sender-focus")?"#ffb54799":"#4c8dff55";g.lineWidth=w;
+      g.beginPath();g.moveTo(e.a.x,e.a.y);g.lineTo(e.b.x,e.b.y);g.stroke();
+      const p=((tick*.012)+e.count*.17)%1;g.fillStyle="#ffd28a";g.beginPath();g.arc(e.a.x+(e.b.x-e.a.x)*p,e.a.y+(e.b.y-e.a.y)*p,1.8,0,7);g.fill()}
+    for(const n of N){const focus=n.kind.includes("focus"),ben=n.kind.startsWith("ben");const r=focus?9:6;
+      g.fillStyle=focus?(ben?"#ff5d6c":"#14c8a0"):(ben?"#ff9aa4":"#7fb2ff");g.shadowColor=g.fillStyle;g.shadowBlur=focus?16:0;
+      g.beginPath();ben?g.rect(n.x-r,n.y-r,r*2,r*2):g.arc(n.x,n.y,r,0,7);g.fill();g.shadowBlur=0;
+      g.fillStyle=focus?"#e8eefb":"#8fa0c2";g.font=(focus?"600 ":"")+"10px Inter,system-ui";g.textAlign="center";g.fillText(n.label.split(" ").slice(0,2).join(" "),n.x,n.y+r+11)}
+    g.fillStyle="#6d7d9e";g.font="9.5px ui-monospace,monospace";g.textAlign="left";g.fillText("● sender   ■ beneficiary   line width = $ volume",8,H-8);
+    netAnim=requestAnimationFrame(frame)})()}
+
+/* corridor flows */
+const DEST={SO:["Mogadishu",22],KE:["Nairobi",42],ET:["Addis Ababa",62],UG:["Kampala",82],DJ:["Djibouti",102],AE:["Dubai",122],US:["United States",142]};
+const corrCount={},recent=[];
+(function initCorr(){const s=el("corr");let h=`<defs><linearGradient id="gl" x1="0" x2="1"><stop offset="0" stop-color="#14c8a0" stop-opacity=".7"/><stop offset="1" stop-color="#4c8dff" stop-opacity=".35"/></linearGradient></defs>`;
+  for(let x=8;x<360;x+=12)for(let y=6;y<165;y+=12)h+=`<circle cx="${x}" cy="${y}" r=".6" fill="#22345a"/>`;
+  h+=`<circle cx="38" cy="82" r="7" fill="#14c8a0" opacity=".2"/><circle cx="38" cy="82" r="3.5" fill="#14c8a0"/><text x="38" y="102" fill="#a7b4cf" font-size="9" text-anchor="middle" font-family="Inter,system-ui">Toronto</text>`;
+  for(const[k,[n,y]]of Object.entries(DEST)){h+=`<path id="p${k}" d="M38 82 C 140 82, 200 ${y}, 262 ${y}" stroke="url(#gl)" stroke-width="1" fill="none" opacity=".55"/>
+    <circle cx="262" cy="${y}" r="3" fill="#4c8dff"/><text x="270" y="${y+3}" fill="#a7b4cf" font-size="9" font-family="Inter,system-ui">${n}</text><text id="v${k}" x="352" y="${y+3}" fill="#e8eefb" font-size="9" text-anchor="end" font-family="ui-monospace,monospace">0</text>`}
+  s.innerHTML=h})();
+function corridorPulse(x){if(!DEST[x.country])return;recent.push(x.country);if(recent.length>200)corrCount[recent.shift()]--;corrCount[x.country]=(corrCount[x.country]||0)+1;
+  for(const k in DEST){const n=el("v"+k);if(n)n.textContent=corrCount[k]||0}
+  const p=el("p"+x.country);if(!p)return;const L=p.getTotalLength(),dot=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  const col=x.decision==="HOLD"?"#ff5d6c":x.decision==="REVIEW"?"#ffb547":"#5be3c2";dot.setAttribute("r",x.decision==="CLEAR"?2:3.2);dot.setAttribute("fill",col);
+  dot.style.filter=`drop-shadow(0 0 3px ${col})`;el("corr").appendChild(dot);const t0=performance.now(),dur=1400;
+  (function mv(t){const k=Math.min(1,(t-t0)/dur),pt=p.getPointAtLength(L*k);dot.setAttribute("cx",pt.x);dot.setAttribute("cy",pt.y);if(k<1)requestAnimationFrame(mv);else dot.remove()})(t0)}
+
+/* controls */
+document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>triggerScenario(b.dataset.s));
+el("speed").oninput=e=>{tps=+e.target.value;el("speedV").textContent=tps+"/s";if(MODE==="java")api("api/speed?tps="+tps)};
+function togglePause(){paused=!paused;el("pauseBtn").querySelector("span").textContent=paused?"Resume":"Pause";el("live").classList.toggle("paused",paused);
+  if(MODE==="java")api("api/speed?tps="+(paused?0.2:tps))}
+el("pauseBtn").onclick=togglePause;
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const S=["false_positive","structuring","true_hit","mule_fanin","velocity"];
+  if(e.key>="1"&&e.key<="5")triggerScenario(S[+e.key-1]);else if(e.key===" "){e.preventDefault();togglePause()}
+  else if(e.key.toLowerCase()==="s")runStory();else if(e.key.toLowerCase()==="a"&&selected)decide(selected,"approve")});
+setInterval(()=>el("clock").textContent=new Date().toLocaleTimeString("en-CA",{hour12:false}),500);
+
+/* guided story — paced for a ~5-minute presentation slot */
+const STORY=[
+ [0,null,"Every transaction, screened and scored in real time","Both sender and beneficiary are checked against watchlists, then nine behavioural rules run over a rolling 24-hour window — in microseconds."],
+ [18,"false_positive","Same name as a listed person — but not the same person","The agent compares date of birth, finds it doesn't match, and recommends release with the evidence written up. The CCO approves in one click."],
+ [65,"structuring","Three sends just under $10,000","Individually unremarkable. Together they cross the 24-hour reporting rule. The agent links them, flags the EFTR obligation and drafts an STR."],
+ [118,"true_hit","Somali spelling variants won't fool it","“Abdikadir Mohamed Farah” and the listed “Cabdiqaadir Maxamed Faarax” are the same name. Somali C, X, Q and long vowels are folded before matching."],
+ [172,"mule_fanin","Five unrelated customers, one new beneficiary","A collection-account pattern. The network view shows the fan-in at a glance."],
+ [222,"velocity","A burst across four corridors in an hour","Daily limit breached, velocity and fan-out rules fire. The agent holds it and asks for enhanced due diligence."],
+ [262,null,"The agent prepares. The CCO decides.","Nothing is released, filed or frozen without human sign-off — and every decision is written to the audit trail."],
+ [285,null,"",""]];
+let storyTimers=[];
+function runStory(){storyTimers.forEach(clearTimeout);storyTimers=[];follow=true;el("followLbl").textContent="● following live";
+  STORY.forEach(([t,s,title,sub],i)=>storyTimers.push(setTimeout(()=>{if(s)triggerScenario(s);
+    const cap=el("caption");if(!title){cap.classList.remove("show");return}el("capT").textContent=title;el("capS").textContent=sub;cap.classList.add("show");
+    const next=(STORY[i+1]||[t+20])[0]-t;const p=el("capP");p.style.transition="none";p.style.width="0";requestAnimationFrame(()=>{p.style.transition=`width ${next}s linear`;p.style.width="100%"})},t*1000)))}
+el("storyBtn").onclick=runStory;
+
+boot();
+</script>
+</body>
+</html>
